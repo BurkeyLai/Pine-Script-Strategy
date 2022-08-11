@@ -1,0 +1,116 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © imugly1029
+
+//@version=4
+strategy("Exponential Bollinger Bands Backtesting", shorttitle = "EBBT", overlay = true, currency=currency.USD)
+
+var bool updateCount = true
+var int crossunderCount = 0
+var int crossoverCount = 0
+
+src = input(ohlc4, title = "source")
+len = input(21, title = "timeframe / # of period's")
+my_offset = input(0, title = "Desired offset (# of bars)")
+e = ema(src,len)
+evar = (src - e)*(src - e)
+evar2 = (sum(evar,len))/(len - 1) //now calculating as sample
+std = sqrt(evar2)
+Multiplier = input(2, minval = 0.01, title = "# of STDEV's")
+upband = e + (Multiplier * std)
+dnband = e - (Multiplier * std)
+
+bb_touch_lower = crossunder(close, dnband)//crossover(close, dnband)
+bb_touch_upper = crossover(close, upband)//crossunder(close, upband)
+
+customalert(_name, _exchange, _symbol, _currency, _price, _strategy, _message) =>
+    alert_array = array.new_string()
+    if _name != ''
+        array.push(alert_array, '"Name": "' + _name + '"')
+    if _exchange != ''
+        array.push(alert_array, '"Exchange": "' + _exchange + '"')
+    if _symbol != ''
+        array.push(alert_array, '"Symbol": "' + _symbol + '"')
+    if _currency != ''
+        array.push(alert_array, '"Currency": "' + _currency + '"')
+    if _price != ''
+        array.push(alert_array, '"Price": "' + _price + '"')
+    if _strategy != ''
+        array.push(alert_array, '"Strategy": "' + _strategy + '"')
+    if _message != ''
+        array.push(alert_array, '"Message": "' + _message + '"')
+    alertstring = '{' + array.join(alert_array,', ') + '}'
+    alert(alertstring, alert.freq_once_per_bar_close)
+
+if bb_touch_lower and updateCount
+    crossunderCount := crossunderCount + 1
+    //label.new(bar_index, low, style=label.style_label_up,
+    //     color=color.green, textcolor=color.white,
+    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
+    updateCount := false
+else if bb_touch_upper and updateCount
+    crossoverCount := crossoverCount + 1
+    //label.new(bar_index, high, style=label.style_label_down,
+    //     color=color.red, textcolor=color.white,
+    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
+    updateCount := false
+    
+var highestNetProfit = 0.0
+var lowestNetProfit  = 0.0
+
+highestNetProfit := max(highestNetProfit, strategy.netprofit)
+lowestNetProfit  := min(lowestNetProfit, strategy.netprofit)
+
+if barstate.isconfirmed
+    //if updateCount == false
+    //    label.new(bar_index, low, style=label.style_label_up,
+    //     color=color.red, textcolor=color.white,
+    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
+        
+    updateCount := true
+    up_shadow = 0.0
+    dn_shadow = 0.0
+    if close > open
+        up_shadow := high - close
+        dn_shadow := open - low
+    else
+        up_shadow := high - open
+        dn_shadow := close - low
+
+    if crossunderCount == 3
+        //customalert('Exponential Bollinger Bands', syminfo.prefix, syminfo.ticker, syminfo.currency, tostring(close, "#.00"), 'long', '')
+        crossunderCount := 0
+        
+        //if up_shadow > dn_shadow
+        //    strategy.entry("Enter Short", strategy.short, 1)
+        //else
+        strategy.entry("Enter Long", strategy.long, 1)
+        
+        //strategy.exit("Exit Short", "Enter Short", profit = 100)
+        //label.new(bar_index, low, style=label.style_label_up,
+        // color=color.green, textcolor=color.white)
+    else
+        strategy.cancel("Enter Long")
+    
+    if crossoverCount == 3
+        //customalert('Exponential Bollinger Bands', syminfo.prefix, syminfo.ticker, syminfo.currency, tostring(close, "#.00"), 'short', '')
+        crossoverCount := 0
+        
+        //if up_shadow > dn_shadow
+        strategy.entry("Enter Short", strategy.short, 1)
+        //else
+        //    strategy.entry("Enter Long", strategy.long, 1)
+        
+        //strategy.exit("Exit Long", "Enter Long", profit = 100)
+        //label.new(bar_index, high, style=label.style_label_down,
+        // color=color.red, textcolor=color.white)
+    else
+        strategy.cancel("Enter Short")
+//////////// Plot Code ///////////////////////////////////
+plot(e, color = color.purple, linewidth = 2, title = "basis", offset = my_offset)
+plot(upband, color = color.red, linewidth = 2, title = "up band", offset = my_offset)
+plot(dnband, color = color.green, linewidth  = 2, title = "down band", offset = my_offset)
+
+
+//plot(strategy.netprofit, style=plot.style_area, title="Net profit", color=strategy.netprofit > 0 ? color.green : color.red)
+//plot(highestNetProfit, color=color.green, title="Highest net profit")
+//plot(lowestNetProfit, color=color.red, title="Lowest net profit")
