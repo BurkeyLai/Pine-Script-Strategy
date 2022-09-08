@@ -43,15 +43,17 @@ customalert(_name, _exchange, _symbol, _currency, _price, _strategy, _message) =
 
 if bb_touch_lower and updateCount
     crossunderCount := crossunderCount + 1
-    //label.new(bar_index, low, style=label.style_label_up,
-    //     color=color.green, textcolor=color.white,
-    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
+    if crossunderCount != 3
+        label.new(bar_index, low, style=label.style_label_up,
+             color=color.green, textcolor=color.white,
+             text=tostring(crossunderCount))
     updateCount := false
 else if bb_touch_upper and updateCount
     crossoverCount := crossoverCount + 1
-    //label.new(bar_index, high, style=label.style_label_down,
-    //     color=color.red, textcolor=color.white,
-    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
+    if crossoverCount != 3
+        label.new(bar_index, high, style=label.style_label_down,
+             color=color.red, textcolor=color.white,
+             text=tostring(crossoverCount))
     updateCount := false
     
 if barstate.isconfirmed

@@ -39,12 +39,20 @@ isTime(_position) =>                                                      // cre
     isTime = time(timeframe.period, _position + ':1234567')               // current time is "within window of time"
 
 // === Alert Function ===
-customalert(_name, _symbol, _message) =>
+customalert(_name, _exchange, _symbol, _currency, _price, _strategy, _message) =>
     alert_array = array.new_string()
     if _name != ''
         array.push(alert_array, '"Name": "' + _name + '"')
+    if _exchange != ''
+        array.push(alert_array, '"Exchange": "' + _exchange + '"')
     if _symbol != ''
         array.push(alert_array, '"Symbol": "' + _symbol + '"')
+    if _currency != ''
+        array.push(alert_array, '"Currency": "' + _currency + '"')
+    if _price != ''
+        array.push(alert_array, '"Price": "' + _price + '"')
+    if _strategy != ''
+        array.push(alert_array, '"Strategy": "' + _strategy + '"')
     if _message != ''
         array.push(alert_array, '"Message": "' + _message + '"')
     alertstring = '{' + array.join(alert_array,', ') + '}'
@@ -52,7 +60,7 @@ customalert(_name, _symbol, _message) =>
 
 // === EBB Strategy ===
 src = input(ohlc4, title = "source")
-len = input(15, title = "timeframe / # of period's")
+len = input(21, title = "timeframe / # of period's")
 my_offset = input(0, title = "Desired offset (# of bars)")
 e = ema(src,len)
 evar = (src - e)*(src - e)
@@ -65,20 +73,18 @@ dnband = e - (Multiplier * std)
 bb_touch_lower = crossunder(close, dnband)//crossover(close, dnband)
 bb_touch_upper = crossover(close, upband)//crossunder(close, upband)
 
-if bb_touch_lower and updateCount
+if bb_touch_lower
     crossunderCount := crossunderCount + 1
     //if isDate() and isTime(entryTime)
     label.new(bar_index, low, style=label.style_label_up,
          color=color.green, textcolor=color.white,
          text=tostring(crossunderCount))
-    updateCount := false
-else if bb_touch_upper and updateCount
+else if bb_touch_upper
     crossoverCount := crossoverCount + 1
     //if isDate() and isTime(entryTime)
     label.new(bar_index, high, style=label.style_label_down,
          color=color.red, textcolor=color.white,
          text=tostring(crossoverCount))
-    updateCount := false
     
 var highestNetProfit = 0.0
 var lowestNetProfit  = 0.0
@@ -87,12 +93,6 @@ highestNetProfit := max(highestNetProfit, strategy.netprofit)
 lowestNetProfit  := min(lowestNetProfit, strategy.netprofit)
 
 if barstate.isconfirmed
-    //if updateCount == false
-    //    label.new(bar_index, low, style=label.style_label_up,
-    //     color=color.red, textcolor=color.white,
-    //     text='crossover: ' + tostring(crossoverCount) + ', crossunder: ' + tostring(crossunderCount))
-        
-    updateCount := true
     //up_shadow = 0.0
     //dn_shadow = 0.0
     //if close > open
@@ -103,7 +103,7 @@ if barstate.isconfirmed
     //    dn_shadow := close - low
 
     if crossunderCount == 3
-        customalert('Exponential Bollinger Bands', 'BTCUSDT', 'close is: ' + tostring(close, "#.00") + 'and lower border is: ' + tostring(dnband, "#.00") + ', maybe it\'s time to buy')
+        customalert('Exponential Bollinger Bands', syminfo.prefix, syminfo.ticker, syminfo.currency, tostring(close, "#.00"), 'long', '')
         crossunderCount := 0
         
         //if up_shadow > dn_shadow
@@ -118,7 +118,7 @@ if barstate.isconfirmed
         strategy.cancel("Enter Long", when = isDate() and isTime(exitTime))
     
     if crossoverCount == 3
-        customalert('Exponential Bollinger Bands', 'BTCUSDT', 'close is: ' + tostring(close, "#.00") + 'and upper border is: ' + tostring(upband, "#.00") + ', maybe it\'s time to sell')
+        customalert('Exponential Bollinger Bands', syminfo.prefix, syminfo.ticker, syminfo.currency, tostring(close, "#.00"), 'short', '')
         crossoverCount := 0
         
         //if up_shadow > dn_shadow
